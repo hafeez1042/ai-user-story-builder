@@ -1,0 +1,81 @@
+I need a full-stack web application whose sole purpose is to streamline manual user-story creation for project management. Follow the specifications below.
+
+Frontend
+
+Use React + TypeScript.
+
+Style with Tailwind CSS v4 and shadcn/ui (ensure Tailwind v4 migration compliance).
+
+Screens and interactions:
+
+Project Dashboard – list/create projects.
+
+Context Upload – drag-and-drop or file picker to add PDFs / DOCX / Markdown describing features, architecture, etc.
+
+Requirement Input – a multiline text box where I paste a single requirement.
+
+Generated Stories Panel – after the backend returns suggestions:
+– Show each suggested user story (and any companion feature).
+– Let me edit / delete / split / merge before confirmation.
+
+Confirm Button – on click, confirmed items are pushed to Azure DevOps and stored locally.
+
+Provide a setting to choose any locally available Ollama model; default = DeepSeek R1 14B.
+
+Backend
+
+Express + TypeScript; run with ts-node / nodemon in dev.
+
+Local file-system storage; persist everything as UTF-8 Markdown (.md):
+/data/{projectId}/{date-time}.md containing requirement, final stories, features, and metadata.
+
+REST endpoints (JSON over HTTP):
+– POST /projects → create project
+– POST /projects/:id/context (upload) → store docs via multer
+– POST /projects/:id/requirement → body:{text} ⇒ returns generated stories/features
+– PUT /projects/:id/confirmed → body:{stories[]} ⇒ pushes to Azure DevOps, writes markdown
+– GET /models → list Ollama models
+
+LangChain (or equivalent) bridges the backend to the local Ollama server. Prompt composition must include:
+– The newly entered requirement
+– All uploaded context docs (summarised or embedded)
+– Existing user stories pulled live from Azure DevOps Boards (via azure-devops-node-api).
+
+Returned text must already be formatted as Markdown bullet lists for direct storage.
+
+Generation Flow
+
+User creates/selects a project.
+
+User uploads context documents (optional, multiple).
+
+User types a requirement and presses “Generate”.
+
+Backend:
+a. Fetches project docs + current Azure DevOps user stories.
+b. Builds a prompt and calls the chosen Ollama model through LangChain.
+c. Returns one or more user stories (and features) in Markdown.
+
+Frontend displays results for user edits.
+
+On confirmation, backend:
+a. Commits each item to Azure DevOps Boards (work-item type User Story / Feature).
+b. Saves a markdown snapshot locally.
+
+UI refreshes with the newly stored stories.
+
+Non-Goals & Constraints
+
+Performance tuning is secondary; prioritize clarity and correctness.
+
+Keep architecture modular so new AI models or context sources can be added later.
+
+Deliverables
+
+React client, Express server, TypeScript throughout.
+
+Tailwind v4-compatible styling and shadcn/ui components.
+
+Working LangChain ↔ Ollama integration.
+
+Azure DevOps write capability and markdown persistence for every confirmed user story.

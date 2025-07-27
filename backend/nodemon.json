@@ -1,0 +1,7 @@
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "ignore": ["node_modules", "**/*.test.ts", "dist"],
+  "exec": "rm -rf dist && tsc && node dist/index.js",
+  "legacyWatch": true
+}

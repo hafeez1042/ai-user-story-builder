@@ -1,0 +1,31 @@
+{
+  "name": "story-builder-v3",
+  "version": "1.0.0",
+  "description": "Full-stack web application for streamlined user-story creation",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "setup": "./scripts/install.sh",
+    "install:all": "npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend:with-backend-wait\"",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:frontend:with-backend-wait": "wait-on -l tcp:4000 && npm run dev:frontend",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "start": "npm start --workspace=backend",
+    "clean": "npm run clean --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/pdfjs-dist": "^2.10.377",
+    "concurrently": "^8.2.2",
+    "wait-on": "^8.0.4"
+  }
+}
