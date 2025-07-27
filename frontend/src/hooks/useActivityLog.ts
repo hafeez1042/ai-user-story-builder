@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import io, { Socket } from 'socket.io-client';
+import config from '@/config';
 
 export interface ActivityLogEvent {
   type: 'info' | 'prompt' | 'response' | 'processing' | 'error';
@@ -8,7 +9,7 @@ export interface ActivityLogEvent {
   timestamp: string;
 }
 
-const BACKEND_URL = 'http://localhost:4000'; // Should match backend URL
+
 
 export const useActivityLog = (projectId: string) => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -18,7 +19,7 @@ export const useActivityLog = (projectId: string) => {
   
   // Connect to socket server
   useEffect(() => {
-    const socketInstance = io(BACKEND_URL);
+    const socketInstance = io(config.socket.url);
     
     socketInstance.on('connect', () => {
       console.log('Socket connected');
