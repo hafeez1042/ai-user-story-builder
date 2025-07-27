@@ -1,6 +1,12 @@
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables as early as possible
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import fs from 'fs-extra';
 import http from 'http';
 import { Server } from 'socket.io';
@@ -14,7 +20,7 @@ const server = http.createServer(app);
 // Setup Socket.IO with CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: process.env.SOCKET_CORS_ORIGIN || '*',
     methods: ['GET', 'POST']
   }
 });
@@ -22,11 +28,18 @@ const io = new Server(server, {
 // Export socket.io instance for use in other files
 export { io };
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*'
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const dataDir = path.join(__dirname, '../../data');
+// Use DATA_DIR from environment or default to '../../data' relative to __dirname
+const dataDir = process.env.DATA_DIR
+  ? (path.isAbsolute(process.env.DATA_DIR)
+    ? process.env.DATA_DIR
+    : path.join(__dirname, process.env.DATA_DIR))
+  : path.join(__dirname, '../../data');
 fs.ensureDirSync(dataDir);
 
 app.use('/api/projects', projectRoutes);
@@ -45,8 +58,16 @@ io.on('connection', (socket) => {
   });
 });
 
+// Import the environment check utility
+import { checkEnvironmentVariables } from './utils/env-check';
+
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Data directory: ${dataDir}`);
   console.log('Socket.IO server enabled');
+  
+  // Check environment variables on startup if in development mode
+  if (process.env.NODE_ENV !== 'production') {
+    checkEnvironmentVariables();
+  }
 });
