@@ -3,10 +3,10 @@ import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs-extra';
-import { Project, RequirementRequest, ConfirmationRequest } from '../types';
+import { Project, RequirementRequest, ConfirmationRequest, AzureDevOpsConfig } from '../types';
 import { DocumentProcessor } from '../services/documentProcessor';
 import { StoryGenerator } from '../services/storyGenerator';
-// import { AzureDevOpsService } from '../services/azureDevOps'; // Temporarily disabled due to TypeScript errors
+import { AzureDevOpsService } from '../services/azureDevOps';
 import { FileStorage } from '../services/fileStorage';
 
 const router = express.Router();
@@ -15,7 +15,7 @@ const dataDir = path.join(__dirname, '../../../data');
 
 const documentProcessor = new DocumentProcessor();
 const storyGenerator = new StoryGenerator();
-// const azureDevOpsService = new AzureDevOpsService(); // Temporarily disabled
+const azureDevOpsService = new AzureDevOpsService();
 const fileStorage = new FileStorage(dataDir);
 
 router.post('/', async (req, res) => {
@@ -111,9 +111,9 @@ router.post('/:id/context', upload.array('files'), async (req, res) => {
 router.post('/:id/requirement', async (req, res) => {
   try {
     const projectId = req.params.id;
-    const { text, modelName = 'deepseek-r1:14b' }: RequirementRequest = req.body;
+    const { requirement, model = 'deepseek-r1:14b', contextIds = [], azureDevOpsData } = req.body;
     
-    if (!text) {
+    if (!requirement) {
       return res.status(400).json({ error: 'Requirement text is required' });
     }
 
@@ -122,15 +122,36 @@ router.post('/:id/requirement', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // const existingStories = await azureDevOpsService.getExistingUserStories(projectId); // Temporarily disabled
-    const existingStories: any[] = []; // Placeholder
-    const contextContent = project.contextFiles.map(f => f.content).join('\n\n');
+    // Get existing stories either from Azure DevOps data passed from frontend
+    // or try to fetch them if credentials are unlocked
+    let existingStories: any[] = [];
+    let existingFeatures: any[] = [];
+    
+    if (azureDevOpsData?.existingStories) {
+      // Use the existing stories provided by the frontend
+      existingStories = azureDevOpsData.existingStories;
+      existingFeatures = azureDevOpsData.existingFeatures || [];
+    } else if (azureDevOpsService.hasUnlockedCredentials(projectId)) {
+      // Fetch from Azure DevOps if credentials are unlocked
+      const azureDevOpsResults = await azureDevOpsService.getExistingItems(projectId);
+      existingStories = azureDevOpsResults.stories || [];
+      existingFeatures = azureDevOpsResults.features || [];
+    }
+    
+    // Get context content from relevant files
+    const relevantContextFiles = contextIds.length > 0 
+      ? project.contextFiles.filter(f => contextIds.includes(f.id))
+      : project.contextFiles;
+      
+    const contextContent = relevantContextFiles.map(f => f.content).join('\n\n');
     
     const generatedContent = await storyGenerator.generateStories({
-      requirement: text,
+      requirement,
       context: contextContent,
       existingStories,
-      modelName
+      existingFeatures,
+      modelName: model,
+      projectId
     });
 
     res.json(generatedContent);
@@ -150,8 +171,18 @@ router.put('/:id/confirmed', async (req, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    // const azureResults = await azureDevOpsService.createWorkItems(projectId, { stories, features }); // Temporarily disabled
-    const azureResults: any = { success: true, message: 'Azure DevOps integration temporarily disabled' }; // Placeholder
+    let azureResults: any;
+    
+    if (azureDevOpsService.hasUnlockedCredentials()) {
+      // If credentials are unlocked, use them to create work items
+      azureResults = await azureDevOpsService.createWorkItems(projectId, { stories, features });
+    } else {
+      // If credentials aren't unlocked, return an error message
+      azureResults = { 
+        success: false, 
+        message: 'Azure DevOps credentials not unlocked. Please provide password to unlock credentials.' 
+      };
+    }
     
     await fileStorage.saveConfirmedStories(projectId, {
       stories,
@@ -164,6 +195,102 @@ router.put('/:id/confirmed', async (req, res) => {
   } catch (error) {
     console.error('Error confirming stories:', error);
     res.status(500).json({ error: 'Failed to confirm stories' });
+  }
+});
+
+// Azure DevOps credential management endpoints
+
+// Set Azure DevOps credentials for a project
+router.post('/:id/azure-credentials', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const { credentials, password } = req.body;
+    
+    if (!credentials || !password) {
+      return res.status(400).json({ error: 'Credentials and password are required' });
+    }
+
+    const project = await fileStorage.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Encrypt credentials with password
+    const { encryptedCredentials, salt } = await azureDevOpsService.encryptCredentials(
+      projectId, 
+      credentials, 
+      password
+    );
+    
+    // Update project with encrypted credentials
+    project.hasAzureDevOpsCredentials = true;
+    project.encryptedAzureDevOpsCredentials = encryptedCredentials;
+    project.azureDevOpsSalt = salt;
+    
+    await fileStorage.updateProject(project);
+    
+    res.json({ 
+      success: true, 
+      message: 'Azure DevOps credentials stored successfully' 
+    });
+  } catch (error) {
+    console.error('Error setting Azure DevOps credentials:', error);
+    res.status(500).json({ error: 'Failed to store Azure DevOps credentials' });
+  }
+});
+
+router.post('/:id/unlock-credentials', async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    const project = await fileStorage.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    if (!project.hasAzureDevOpsCredentials) {
+      return res.status(400).json({ error: 'No Azure DevOps credentials found for this project' });
+    }
+    
+    // Try to unlock credentials with provided password
+    const unlocked = await azureDevOpsService.unlockCredentials(project, password);
+    
+    if (!unlocked) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+    
+    // Initialize Azure DevOps connection
+    await azureDevOpsService.initialize();
+    
+    // Return success and get existing stories from Azure DevOps
+    const existingStories = await azureDevOpsService.getExistingUserStories(projectId);
+    const existingFeatures = await azureDevOpsService.getExistingFeatures(projectId);
+    
+    res.json({ 
+      success: true, 
+      message: 'Azure DevOps credentials unlocked successfully',
+      existingStories,
+      existingFeatures
+    });
+  } catch (error) {
+    console.error('Error unlocking Azure DevOps credentials:', error);
+    res.status(500).json({ error: 'Failed to unlock Azure DevOps credentials' });
+  }
+});
+
+// Lock Azure DevOps credentials (clear from memory)
+router.post('/:id/lock-credentials', async (req, res) => {
+  try {
+    azureDevOpsService.lockCredentials();
+    res.json({ success: true, message: 'Azure DevOps credentials locked successfully' });
+  } catch (error) {
+    console.error('Error locking Azure DevOps credentials:', error);
+    res.status(500).json({ error: 'Failed to lock Azure DevOps credentials' });
   }
 });
 

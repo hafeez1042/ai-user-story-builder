@@ -3,7 +3,7 @@ import { OllamaModel } from '../types';
 export class OllamaService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:11434') {
+  constructor(baseUrl: string = process.env.OLLAMA_BASE_URL || 'http://localhost:11434') {
     this.baseUrl = baseUrl;
   }
 

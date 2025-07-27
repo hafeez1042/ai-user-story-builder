@@ -4,6 +4,9 @@ export interface Project {
   description?: string;
   createdAt: string;
   contextFiles: ContextFile[];
+  hasAzureDevOpsCredentials?: boolean;
+  encryptedAzureDevOpsCredentials?: string;
+  azureDevOpsSalt?: string;
 }
 
 export interface ContextFile {
@@ -42,4 +45,10 @@ export interface OllamaModel {
   size: number;
   digest: string;
   modified_at: string;
+}
+
+export interface AzureDevOpsConfig {
+  organizationUrl: string;
+  personalAccessToken: string;
+  project: string;
 }

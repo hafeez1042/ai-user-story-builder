@@ -1,24 +1,42 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { GeneratedContent } from '@/types'
 import { GeneratedStoriesPanel } from '@/components/GeneratedStoriesPanel'
 import { api } from '@/services/api'
+import { ActivityLog } from '@/components/ActivityLog'
+import { useActivityLog } from '@/hooks/useActivityLog'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 export function GeneratedStoriesPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [content, setContent] = useState<GeneratedContent | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false)
+  
+  // Socket activity log
+  const { activities, isProcessing } = useActivityLog(id || '')
 
   useEffect(() => {
     // Try to load generated content from session storage
     const storedContent = sessionStorage.getItem(`generatedContent-${id}`)
+    console.log('Retrieved content from session storage:', { id, storedContent })
+    
     if (storedContent) {
-      setContent(JSON.parse(storedContent))
+      try {
+        const parsedContent = JSON.parse(storedContent)
+        console.log('Parsed content:', parsedContent)
+        setContent(parsedContent)
+      } catch (error) {
+        console.error('Error parsing content from session storage:', error)
+        // If there's an error parsing the content, don't redirect
+        alert('Error loading generated stories. Please try generating them again.')
+      }
     } else {
       // If there's no generated content in storage, redirect back to the project page
+      console.log('No content found in session storage, redirecting back to project page')
       navigate(`/project/${id}`)
     }
     setLoading(false)
@@ -86,6 +104,36 @@ export function GeneratedStoriesPage() {
           onConfirm={handleConfirmStories}
           onEdit={setContent}
         />
+        
+        {/* Activity Log Section */}
+        <div className="mt-8">
+          <Collapsible
+            open={isActivityLogOpen}
+            onOpenChange={setIsActivityLogOpen}
+            className="border rounded-lg overflow-hidden"
+          >
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center justify-between p-4 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  <span>Generation Activity Log</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {isActivityLogOpen ? 'Hide Details' : 'Show Details'}
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ActivityLog 
+                activities={activities} 
+                isProcessing={isProcessing} 
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </div>
     </div>
   )

@@ -54,10 +54,19 @@ class ApiService {
     return response.json();
   }
 
-  async generateStories(projectId: string, requirement: string, modelName?: string): Promise<GeneratedContent> {
+  async generateStories(
+    projectId: string, 
+    requirement: string, 
+    modelName?: string, 
+    azureDevOpsData?: { existingStories: any[], existingFeatures: any[] }
+  ): Promise<GeneratedContent> {
     return this.fetch<GeneratedContent>(`/projects/${projectId}/requirement`, {
       method: 'POST',
-      body: JSON.stringify({ text: requirement, modelName }),
+      body: JSON.stringify({ 
+        requirement, 
+        model: modelName,
+        azureDevOpsData
+      }),
     });
   }
 

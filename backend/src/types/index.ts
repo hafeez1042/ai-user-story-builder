@@ -4,6 +4,9 @@ export interface Project {
   description?: string;
   createdAt: string;
   contextFiles: ContextFile[];
+  hasAzureDevOpsCredentials?: boolean;
+  encryptedAzureDevOpsCredentials?: string;
+  azureDevOpsSalt?: string;
 }
 
 export interface ContextFile {
