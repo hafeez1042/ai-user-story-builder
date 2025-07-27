@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit2, Trash2, Check, Split, Merge } from 'lucide-react'
+import { Edit2, Trash2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'

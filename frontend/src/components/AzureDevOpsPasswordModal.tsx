@@ -16,7 +16,7 @@ interface AzureDevOpsPasswordModalProps {
  * Modal component for prompting the user for their Azure DevOps credentials password
  */
 export const AzureDevOpsPasswordModal: React.FC<AzureDevOpsPasswordModalProps> = ({
-  projectId,
+  projectId: _, // Using _ to ignore this unused prop
   isOpen,
   onClose,
   onUnlock,

@@ -173,7 +173,7 @@ export function CompactContextUpload({ project, onContextUploaded }: CompactCont
                       className="flex items-center gap-2 flex-1 cursor-pointer hover:text-primary" 
                       onClick={(e) => {
                         e.stopPropagation()
-                        openFile(file.path)
+                        openFile(file.filename)
                       }}
                     >
                       <File className="h-4 w-4" />

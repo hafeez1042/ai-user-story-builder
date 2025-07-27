@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Card, CardContent } from '@/components/ui/card';
 import { ActivityLogEvent } from '@/hooks/useActivityLog';
 import { Input } from '@/components/ui/input';
-import { UserStory, Feature } from '@/types';
+// Removed unused imports
 
 interface ActivityLogProps {
   activities: ActivityLogEvent[];
