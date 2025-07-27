@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: true,
       port: parseInt(env.VITE_PORT || "3000"),
       strictPort: true,
       watch: {
@@ -34,6 +35,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: {
+      host: true,
       port: parseInt(env.VITE_PORT || "3000"),
       strictPort: true,
       proxy: {
