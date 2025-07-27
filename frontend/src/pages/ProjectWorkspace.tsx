@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, FileText, Settings } from 'lucide-react'
+import { ArrowLeft, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { api } from '@/services/api'
-import { Project, GeneratedContent, OllamaModel } from '@/types'
-import { ContextUpload } from '@/components/ContextUpload'
-import { GeneratedStoriesPanel } from '@/components/GeneratedStoriesPanel'
+import { Project, OllamaModel } from '@/types'
+import { CompactContextUpload } from '@/components/CompactContextUpload'
 import { ModelSelector } from '@/components/ModelSelector'
 
 export function ProjectWorkspace() {
@@ -15,7 +14,6 @@ export function ProjectWorkspace() {
   const navigate = useNavigate()
   const [project, setProject] = useState<Project | null>(null)
   const [requirement, setRequirement] = useState('')
-  const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
   const [models, setModels] = useState<OllamaModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('deepseek-r1:14b')
   const [loading, setLoading] = useState(true)
@@ -59,27 +57,19 @@ export function ProjectWorkspace() {
     setGenerating(true)
     try {
       const content = await api.generateStories(project.id, requirement, selectedModel)
-      setGeneratedContent(content)
+      // Store the generated content in session storage
+      sessionStorage.setItem(`generatedContent-${project.id}`, JSON.stringify(content))
+      // Navigate to the generated stories page
+      navigate(`/project/${project.id}/stories`)
     } catch (error) {
       console.error('Failed to generate stories:', error)
+      alert('Failed to generate stories. Please try again.')
     } finally {
       setGenerating(false)
     }
   }
 
-  const handleConfirmStories = async (stories: any[], features: any[]) => {
-    if (!project) return
 
-    try {
-      await api.confirmStories(project.id, stories, features)
-      setGeneratedContent(null)
-      setRequirement('')
-      alert('Stories confirmed and pushed to Azure DevOps!')
-    } catch (error) {
-      console.error('Failed to confirm stories:', error)
-      alert('Failed to confirm stories. Please try again.')
-    }
-  }
 
   if (loading) {
     return (
@@ -109,7 +99,7 @@ export function ProjectWorkspace() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -130,60 +120,38 @@ export function ProjectWorkspace() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <ContextUpload 
-            project={project} 
-            onContextUploaded={handleContextUploaded}
-          />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Requirement Input
-              </CardTitle>
-              <CardDescription>
-                Enter a single requirement to generate user stories
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Enter your requirement here..."
-                value={requirement}
-                onChange={(e) => setRequirement(e.target.value)}
-                className="min-h-[120px]"
-              />
-              <Button 
-                onClick={handleGenerateStories}
-                disabled={!requirement.trim() || generating}
-                className="w-full"
-              >
-                {generating ? 'Generating...' : 'Generate Stories'}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          {generatedContent ? (
-            <GeneratedStoriesPanel
-              content={generatedContent}
-              onConfirm={handleConfirmStories}
-              onEdit={setGeneratedContent}
+      <div className="max-w-3xl mx-auto">
+        <CompactContextUpload 
+          project={project} 
+          onContextUploaded={handleContextUploaded}
+        />
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Requirement Input
+            </CardTitle>
+            <CardDescription>
+              Enter a single requirement to generate user stories
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="Enter your requirement here..."
+              value={requirement}
+              onChange={(e) => setRequirement(e.target.value)}
+              className="min-h-[200px]"
             />
-          ) : (
-            <Card>
-              <CardContent className="flex items-center justify-center h-64">
-                <div className="text-center text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Generated stories will appear here</p>
-                  <p className="text-sm mt-1">Enter a requirement and click Generate Stories</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+            <Button 
+              onClick={handleGenerateStories}
+              disabled={!requirement.trim() || generating}
+              className="w-full"
+            >
+              {generating ? 'Generating...' : 'Generate Stories'}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
