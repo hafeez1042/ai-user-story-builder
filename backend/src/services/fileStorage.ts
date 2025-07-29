@@ -129,6 +129,33 @@ export class FileStorage {
     return markdown;
   }
 
+  async getConfirmedStories(projectId: string): Promise<UserStory[]> {
+    try {
+      const projectDir = path.join(this.dataDir, projectId);
+      if (!(await fs.pathExists(projectDir))) {
+        return [];
+      }
+
+      const files = await fs.readdir(projectDir);
+      const storyFiles = files.filter(file => file.endsWith('.json') && file !== 'project.json');
+
+      let allStories: UserStory[] = [];
+
+      for (const file of storyFiles) {
+        const filePath = path.join(projectDir, file);
+        const data: ConfirmedStoryData = await fs.readJson(filePath);
+        if (data.stories) {
+          allStories = allStories.concat(data.stories);
+        }
+      }
+
+      return allStories;
+    } catch (error) {
+      console.error('Error reading confirmed stories:', error);
+      return [];
+    }
+  }
+
   async getProjectHistory(projectId: string): Promise<string[]> {
     try {
       const projectDir = path.join(this.dataDir, projectId);

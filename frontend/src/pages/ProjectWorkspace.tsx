@@ -14,6 +14,7 @@ import { AzureDevOpsPasswordModal } from '@/components/AzureDevOpsPasswordModal'
 import { AzureDevOpsSetupForm } from '@/components/AzureDevOpsSetupForm'
 import { AzureDevOpsService } from '@/services/azureDevOpsService'
 import { StoryManagementService } from '@/services/storyManagementService'
+import { ConfirmedStoriesSidebar } from '@/components/ConfirmedStoriesSidebar'
 
 export function ProjectWorkspace() {
   const { id } = useParams<{ id: string }>()
@@ -313,7 +314,7 @@ export function ProjectWorkspace() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-8 px-4 pr-16">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/')}>
@@ -419,6 +420,8 @@ export function ProjectWorkspace() {
           loadProject();
         }}
       />
+
+      <ConfirmedStoriesSidebar projectId={project.id} />
     </div>
   )
 }

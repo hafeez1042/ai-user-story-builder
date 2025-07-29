@@ -65,6 +65,16 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.get('/:id/stories', async (req, res) => {
+  try {
+    const stories = await fileStorage.getConfirmedStories(req.params.id);
+    res.json(stories);
+  } catch (error) {
+    console.error('Error fetching confirmed stories:', error);
+    res.status(500).json({ error: 'Failed to fetch confirmed stories' });
+  }
+});
+
 router.post('/:id/context', upload.array('files'), async (req, res) => {
   try {
     const projectId = req.params.id;
